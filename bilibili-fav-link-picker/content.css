@@ -1,0 +1,138 @@
+.bflp-card {
+  position: relative !important;
+  outline-offset: 2px;
+}
+
+.bflp-card.bflp-selected {
+  outline: 2px solid #00a1d6;
+  background-image: linear-gradient(rgba(0, 161, 214, 0.08), rgba(0, 161, 214, 0.08));
+}
+
+.bflp-thumbnail-select,
+.bflp-thumbnail-select *,
+.bflp-card [class*='cover'],
+.bflp-card [class*='pic'] {
+  cursor: pointer !important;
+}
+
+.bflp-check {
+  position: absolute;
+  z-index: 10000;
+  top: 6px;
+  left: 6px;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.58);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  color: #fff;
+  cursor: pointer;
+  touch-action: manipulation;
+  user-select: none;
+}
+
+.bflp-check::after {
+  content: "";
+  width: 15px;
+  height: 9px;
+  border-left: 2px solid transparent;
+  border-bottom: 2px solid transparent;
+  transform: rotate(-45deg) translateY(-1px);
+}
+
+.bflp-check::before {
+  content: "";
+  position: absolute;
+  inset: -12px;
+  border-radius: 50%;
+}
+
+.bflp-card.bflp-selected .bflp-check {
+  border-color: #00a1d6;
+  background: #00a1d6;
+}
+
+.bflp-card.bflp-selected .bflp-check::after {
+  border-left-color: #fff;
+  border-bottom-color: #fff;
+}
+
+.bflp-toolbar {
+  position: fixed;
+  z-index: 2147483647;
+  right: 20px;
+  bottom: 20px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: min(520px, calc(100vw - 40px));
+  padding: 10px;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.18);
+  color: #18191c;
+  font: 13px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+.bflp-count {
+  min-width: 130px;
+  white-space: nowrap;
+  color: #61666d;
+}
+
+.bflp-button {
+  min-height: 32px;
+  padding: 0 12px;
+  border: 1px solid #c9ccd0;
+  border-radius: 6px;
+  background: #fff;
+  color: #18191c;
+  font: inherit;
+  cursor: pointer;
+}
+
+.bflp-button:hover {
+  border-color: #00a1d6;
+  color: #00a1d6;
+}
+
+.bflp-button-primary {
+  border-color: #00a1d6;
+  background: #00a1d6;
+  color: #fff;
+}
+
+.bflp-button-primary:hover {
+  color: #fff;
+  filter: brightness(0.95);
+}
+
+.bflp-toast {
+  position: fixed;
+  z-index: 2147483647;
+  right: 20px;
+  bottom: 76px;
+  max-width: min(420px, calc(100vw - 40px));
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: rgba(24, 25, 28, 0.92);
+  color: #fff;
+  font: 13px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+@media (max-width: 560px) {
+  .bflp-toolbar {
+    right: 10px;
+    bottom: 10px;
+    left: 10px;
+    flex-wrap: wrap;
+  }
+
+  .bflp-count {
+    min-width: 100%;
+  }
+}

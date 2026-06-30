@@ -1,0 +1,33 @@
+{
+  "manifest_version": 3,
+  "name": "Bilibili Favorite Link Picker",
+  "version": "0.2.0",
+  "description": "Select videos on Bilibili favorite pages and copy their links in batches.",
+  "permissions": [
+    "clipboardWrite",
+    "activeTab",
+    "scripting",
+    "tabs"
+  ],
+  "host_permissions": [
+    "https://*.bilibili.com/*"
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Bilibili Favorite Link Picker"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://*.bilibili.com/*"
+      ],
+      "js": [
+        "content.js"
+      ],
+      "css": [
+        "content.css"
+      ],
+      "run_at": "document_idle"
+    }
+  ]
+}

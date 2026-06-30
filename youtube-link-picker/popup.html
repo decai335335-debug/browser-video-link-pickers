@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>YouTube Link Picker</title>
+    <link rel="stylesheet" href="popup.css">
+  </head>
+  <body>
+    <main>
+      <h1>YouTube 链接选择</h1>
+      <p>打开 YouTube 搜索结果、播放列表或频道视频页后，每个视频左上角会出现选择圆点。</p>
+      <ul>
+        <li>点击封面：选择/取消当前视频</li>
+        <li>点击圆钮：选择/取消当前视频</li>
+        <li>点击标题：打开视频页面</li>
+      </ul>
+      <button id="copy" type="button">复制已选链接</button>
+      <button id="scan" type="button">重新识别页面</button>
+      <p id="status" role="status"></p>
+    </main>
+    <script src="popup.js"></script>
+  </body>
+</html>
