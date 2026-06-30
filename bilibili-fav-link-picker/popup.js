@@ -1,7 +1,6 @@
 const status = document.querySelector("#status");
 
 const isBilibiliUrl = (url) => /^https:\/\/([^.]+\.)?bilibili\.com\//i.test(url || "");
-
 const getActiveTab = async () => {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   if (!tab?.id) throw new Error("No active tab");

@@ -1,7 +1,26 @@
 (() => {
   "use strict";
 
-  const SCRIPT_VERSION = "0.2.0";
+  const SCRIPT_VERSION = "0.2.2";
+
+  const cleanupInjectedUi = () => {
+    if (window.__BFLP_GLOBAL_HANDLER) {
+      for (const type of window.__BFLP_GLOBAL_HANDLER.types) {
+        document.removeEventListener(type, window.__BFLP_GLOBAL_HANDLER.handle, true);
+      }
+      window.__BFLP_GLOBAL_HANDLER = null;
+    }
+
+    document.querySelectorAll(".bflp-toolbar, .bflp-toast, .bflp-check").forEach((node) => node.remove());
+    document.querySelectorAll(".bflp-card").forEach((node) => {
+      node.classList.remove("bflp-card", "bflp-selected");
+      delete node.dataset.bflpIndex;
+    });
+    document.querySelectorAll(".bflp-thumbnail-select").forEach((node) => {
+      node.classList.remove("bflp-thumbnail-select");
+      delete node.dataset.bflpThumbnailReady;
+    });
+  };
 
   if (window.__BFLP_VERSION === SCRIPT_VERSION) {
     return;
@@ -10,6 +29,35 @@
 
   const VIDEO_URL_RE = /(?:www\.)?bilibili\.com\/video\/(BV[0-9A-Za-z]+)/i;
   const SHORT_VIDEO_RE = /^\/video\/(BV[0-9A-Za-z]+)/i;
+  const isPlaybackPage = /^\/video\//i.test(location.pathname);
+  const PLAYBACK_IGNORE_SELECTOR = [
+    "#bilibili-player",
+    ".bpx-player-container",
+    ".bpx-player-video-area",
+    ".video-toolbar",
+    ".video-toolbar-left",
+    ".video-toolbar-right",
+    ".video-desc-container",
+    ".video-info-container",
+    ".up-info-container",
+    ".up-panel-container",
+    ".members-info-container",
+    ".video-sections",
+    ".base-video-sections",
+    ".video-pod",
+    ".cur-list",
+    ".multi-page",
+    ".left-container",
+    ".comment-container",
+    ".reply-warp",
+    ".ad-report",
+    ".recommend-ad",
+    "[class*='player']",
+    "[class*='toolbar']",
+    "[class*='episode']",
+    "[class*='section']",
+    "[class*='multi-page']"
+  ].join(",");
   const state = {
     items: [],
     selected: new Set(),
@@ -35,6 +83,13 @@
     return `https://www.bilibili.com/video/${match[1]}`;
   };
 
+  const currentVideoUrl = normalizeVideoUrl(location.href);
+
+  const isIgnoredOnPlaybackPage = (element) => {
+    if (!isPlaybackPage || !(element instanceof Element)) return false;
+    return Boolean(element.closest(PLAYBACK_IGNORE_SELECTOR));
+  };
+
   const getVideoTitle = (anchor) => {
     const text = anchor.textContent.trim();
     if (text) return text;
@@ -49,20 +104,26 @@
       ".bili-video-card",
       ".bili-video-card__wrap",
       ".video-card",
+      ".video-page-card-small",
+      ".video-page-operator-card",
       ".feed-card",
       ".card-box",
-      "li",
       "[class*='video-card']",
-      "[class*='fav']",
-      "[class*='video']",
-      "[class*='item']"
+      "[class*='fav-card']",
+      "li"
     ];
 
     for (const selector of selectors) {
       const candidate = anchor.closest(selector);
+      if (isIgnoredOnPlaybackPage(candidate)) continue;
       if (candidate && candidate !== document.body && candidate !== document.documentElement) {
         const rect = candidate.getBoundingClientRect();
-        if (rect.width >= 80 && rect.height >= 50) return candidate;
+        const hasLinkedThumb = Boolean(
+          candidate.querySelector("a[href*='/video/BV'] img, a[href*='/video/BV'] picture, a[href*='bilibili.com/video/BV'] img, a[href*='bilibili.com/video/BV'] picture")
+        );
+        if (rect.width >= 80 && rect.height >= 50 && (selector !== "li" || hasLinkedThumb)) {
+          return candidate;
+        }
       }
     }
 
@@ -76,6 +137,8 @@
     for (const anchor of document.querySelectorAll("a[href]")) {
       const url = normalizeVideoUrl(anchor.href);
       if (!url || seen.has(url)) continue;
+      if (isPlaybackPage && url === currentVideoUrl) continue;
+      if (isIgnoredOnPlaybackPage(anchor)) continue;
       seen.add(url);
       anchors.push({ anchor, url, title: getVideoTitle(anchor) });
     }
@@ -177,26 +240,35 @@
     return { x: event.clientX, y: event.clientY };
   };
 
-  const getThumbnailElement = (card) =>
-    card.querySelector(".bili-video-card__cover") ||
-    card.querySelector(".bili-video-card__image") ||
-    card.querySelector(".cover") ||
-    card.querySelector(".pic") ||
-    card.querySelector(".img") ||
-    card.querySelector("[class*='cover']") ||
-    card.querySelector("[class*='pic']") ||
-    card.querySelector("picture") ||
-    card.querySelector("img")?.closest("a, .bili-video-card__cover, .cover, .pic, div") ||
-    card.querySelector("a[href*='/video/BV']");
+  const getThumbnailElement = (card) => {
+    const linkedThumb = [...card.querySelectorAll("a[href*='/video/BV'], a[href*='bilibili.com/video/BV']")]
+      .find((link) => {
+        if (isIgnoredOnPlaybackPage(link)) return false;
+        if (link.closest(".bili-video-card__info, .title, [class*='title']")) return false;
+        return Boolean(link.querySelector("img, picture, [class*='cover'], [class*='pic']"));
+      });
+
+    return (
+      linkedThumb ||
+      card.querySelector(".bili-video-card__cover") ||
+      card.querySelector(".bili-video-card__image") ||
+      card.querySelector(".cover") ||
+      card.querySelector(".pic") ||
+      card.querySelector("[class*='cover']") ||
+      card.querySelector("[class*='pic']")
+    );
+  };
 
   const isInsideThumbnailArea = (event, card) => {
     const target = event.target;
     if (!(target instanceof Element)) return false;
+    if (isIgnoredOnPlaybackPage(target)) return false;
     if (target.closest(".bflp-check, .bflp-toolbar, .bflp-toast")) return false;
     if (target.closest("button, [role='button'], .bili-video-card__stats, .watch-later, [class*='menu']")) return false;
     if (target.closest(".bili-video-card__info, .title, [class*='title'], [class*='author'], [class*='up']")) return false;
 
     const thumbnail = getThumbnailElement(card);
+    if (isIgnoredOnPlaybackPage(thumbnail)) return false;
     if (!thumbnail) return false;
 
     const rect = thumbnail.getBoundingClientRect();
@@ -234,6 +306,7 @@
   };
 
   const handleGlobalThumbnailEvent = (event) => {
+    if ("button" in event && event.button !== 0) return;
     const match = findThumbnailItemFromEvent(event);
     if (!match) return;
 
