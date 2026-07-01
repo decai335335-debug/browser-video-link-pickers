@@ -1,7 +1,7 @@
 (() => {
   "use strict";
 
-  const SCRIPT_VERSION = "0.2.3";
+  const SCRIPT_VERSION = "0.2.4";
 
   const cleanupInjectedUi = () => {
     if (window.__BFLP_GLOBAL_HANDLER) {
@@ -31,6 +31,9 @@
   const VIDEO_URL_RE = /(?:www\.)?bilibili\.com\/video\/(BV[0-9A-Za-z]+)/i;
   const SHORT_VIDEO_RE = /^\/video\/(BV[0-9A-Za-z]+)/i;
   const isPlaybackPage = /^\/video\//i.test(location.pathname);
+  if (isPlaybackPage && !window.__BFLP_ALLOW_PLAYBACK) {
+    return;
+  }
   const PLAYBACK_IGNORE_SELECTOR = [
     "#bilibili-player",
     ".bpx-player-container",

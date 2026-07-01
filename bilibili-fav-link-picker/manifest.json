@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Bilibili Favorite Link Picker",
-  "version": "0.2.3",
+  "version": "0.2.4",
   "description": "Select videos on Bilibili favorite pages and copy their links in batches.",
   "permissions": [
     "clipboardWrite",
@@ -20,6 +20,9 @@
     {
       "matches": [
         "https://*.bilibili.com/*"
+      ],
+      "exclude_matches": [
+        "https://*.bilibili.com/video/*"
       ],
       "js": [
         "content.js"
