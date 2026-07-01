@@ -20,6 +20,7 @@ const injectIntoTab = async (tabId) => {
     target: { tabId },
     func: () => {
       window.__BFLP_ALLOW_PLAYBACK = true;
+      window.__BFLP_VERSION = "";
     }
   });
 
@@ -40,6 +41,13 @@ const sendToActiveTab = async (message) => {
     throw new Error("Open a Bilibili page first");
   }
   const isManualPlaybackInject = isBilibiliVideoPage(tab.url);
+
+  if (isManualPlaybackInject && message.type === "BFLP_SCAN") {
+    await injectIntoTab(tab.id);
+    await new Promise((resolve) => setTimeout(resolve, 150));
+    const result = await chrome.tabs.sendMessage(tab.id, message);
+    return { ...result, playbackManual: true };
+  }
 
   try {
     return await chrome.tabs.sendMessage(tab.id, message);

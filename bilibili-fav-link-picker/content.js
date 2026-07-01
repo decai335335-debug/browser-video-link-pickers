@@ -1,7 +1,7 @@
 (() => {
   "use strict";
 
-  const SCRIPT_VERSION = "0.2.4";
+  const SCRIPT_VERSION = "0.2.5";
 
   const cleanupInjectedUi = () => {
     if (window.__BFLP_GLOBAL_HANDLER) {
@@ -64,6 +64,9 @@
   ].join(",");
   const PLAYBACK_SCAN_ROOT_SELECTOR = [
     ".right-container",
+    "#right-bottom-banner",
+    ".right-bottom-banner",
+    ".video-page-game-card-small",
     ".recommend-list-v1",
     ".recommend-list",
     ".rec-list",
@@ -104,6 +107,35 @@
     return Boolean(element.closest(PLAYBACK_IGNORE_SELECTOR));
   };
 
+  const getPlayerRect = () => {
+    const player =
+      document.querySelector("#bilibili-player") ||
+      document.querySelector(".bpx-player-container") ||
+      document.querySelector(".bpx-player-video-area");
+    return player?.getBoundingClientRect() || null;
+  };
+
+  const hasVideoThumbnail = (element) => {
+    if (!(element instanceof Element)) return false;
+    return Boolean(element.querySelector("img, picture, [class*='cover'], [class*='pic']"));
+  };
+
+  const isPlaybackGeometryCandidate = (element) => {
+    if (!isPlaybackPage || !(element instanceof Element)) return true;
+    if (isIgnoredOnPlaybackPage(element)) return false;
+
+    const rect = element.getBoundingClientRect();
+    if (rect.width < 80 || rect.height < 50) return false;
+    if (rect.top < 80) return false;
+
+    const playerRect = getPlayerRect();
+    if (!playerRect) return true;
+
+    const isRightOfPlayer = rect.left >= playerRect.right - 24 && rect.top >= playerRect.top - 80;
+    const isBelowPlayer = rect.top >= playerRect.bottom + 20;
+    return isRightOfPlayer || isBelowPlayer;
+  };
+
   const getVideoTitle = (anchor) => {
     const text = anchor.textContent.trim();
     if (text) return text;
@@ -115,7 +147,7 @@
     if (!isPlaybackPage) return [document];
     const roots = [...document.querySelectorAll(PLAYBACK_SCAN_ROOT_SELECTOR)]
       .filter((root) => root instanceof Element && !isIgnoredOnPlaybackPage(root));
-    return roots.length ? roots : [];
+    return roots.length ? roots : [document];
   };
 
   const findCard = (anchor) => {
@@ -150,13 +182,19 @@
         const hasLinkedThumb = Boolean(
           candidate.querySelector("a[href*='/video/BV'] img, a[href*='/video/BV'] picture, a[href*='bilibili.com/video/BV'] img, a[href*='bilibili.com/video/BV'] picture")
         );
-        if (rect.width >= 80 && rect.height >= 50 && (selector !== "li" || hasLinkedThumb)) {
+        if (rect.width >= 80 && rect.height >= 50 && (selector !== "li" || hasLinkedThumb) && isPlaybackGeometryCandidate(candidate)) {
           return candidate;
         }
       }
     }
 
-    if (isPlaybackPage) return null;
+    if (isPlaybackPage) {
+      const linkCard = anchor.closest("a[href], div, li");
+      if (linkCard && hasVideoThumbnail(linkCard) && isPlaybackGeometryCandidate(linkCard)) {
+        return linkCard;
+      }
+      return null;
+    }
     return anchor;
   };
 
@@ -170,6 +208,7 @@
         if (!url || seen.has(url)) continue;
         if (isPlaybackPage && url === currentVideoUrl) continue;
         if (isIgnoredOnPlaybackPage(anchor)) continue;
+        if (isPlaybackPage && (!hasVideoThumbnail(anchor) || !isPlaybackGeometryCandidate(anchor))) continue;
         seen.add(url);
         anchors.push({ anchor, url, title: getVideoTitle(anchor) });
       }
