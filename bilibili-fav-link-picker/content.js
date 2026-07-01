@@ -1,7 +1,7 @@
 (() => {
   "use strict";
 
-  const SCRIPT_VERSION = "0.2.5";
+  const SCRIPT_VERSION = "0.2.6";
 
   const cleanupInjectedUi = () => {
     if (window.__BFLP_GLOBAL_HANDLER) {
@@ -46,21 +46,13 @@
     ".up-info-container",
     ".up-panel-container",
     ".members-info-container",
-    ".video-sections",
-    ".base-video-sections",
-    ".video-pod",
-    ".cur-list",
-    ".multi-page",
     ".left-container",
     ".comment-container",
     ".reply-warp",
     ".ad-report",
     ".recommend-ad",
     "[class*='player']",
-    "[class*='toolbar']",
-    "[class*='episode']",
-    "[class*='section']",
-    "[class*='multi-page']"
+    "[class*='toolbar']"
   ].join(",");
   const PLAYBACK_SCAN_ROOT_SELECTOR = [
     ".right-container",
@@ -117,7 +109,12 @@
 
   const hasVideoThumbnail = (element) => {
     if (!(element instanceof Element)) return false;
-    return Boolean(element.querySelector("img, picture, [class*='cover'], [class*='pic']"));
+    return Boolean(element.querySelector("img, picture, video, canvas, [class*='cover'], [class*='pic'], [class*='thumb']"));
+  };
+
+  const hasVideoLink = (element) => {
+    if (!(element instanceof Element)) return false;
+    return Boolean([...element.querySelectorAll("a[href]")].some((link) => normalizeVideoUrl(link.href)));
   };
 
   const isPlaybackGeometryCandidate = (element) => {
@@ -150,7 +147,29 @@
     return roots.length ? roots : [document];
   };
 
+  const findPlaybackCard = (anchor) => {
+    let candidate = anchor;
+    for (let depth = 0; candidate && depth < 8; depth += 1) {
+      if (
+        candidate !== document.body &&
+        candidate !== document.documentElement &&
+        !isIgnoredOnPlaybackPage(candidate) &&
+        hasVideoLink(candidate) &&
+        hasVideoThumbnail(candidate) &&
+        isPlaybackGeometryCandidate(candidate)
+      ) {
+        return candidate;
+      }
+      candidate = candidate.parentElement;
+    }
+    return null;
+  };
+
   const findCard = (anchor) => {
+    if (isPlaybackPage) {
+      return findPlaybackCard(anchor);
+    }
+
     const selectors = isPlaybackPage ? [
       ".video-page-card-small",
       ".video-page-operator-card",
@@ -188,13 +207,6 @@
       }
     }
 
-    if (isPlaybackPage) {
-      const linkCard = anchor.closest("a[href], div, li");
-      if (linkCard && hasVideoThumbnail(linkCard) && isPlaybackGeometryCandidate(linkCard)) {
-        return linkCard;
-      }
-      return null;
-    }
     return anchor;
   };
 
@@ -208,7 +220,7 @@
         if (!url || seen.has(url)) continue;
         if (isPlaybackPage && url === currentVideoUrl) continue;
         if (isIgnoredOnPlaybackPage(anchor)) continue;
-        if (isPlaybackPage && (!hasVideoThumbnail(anchor) || !isPlaybackGeometryCandidate(anchor))) continue;
+        if (isPlaybackPage && !findPlaybackCard(anchor)) continue;
         seen.add(url);
         anchors.push({ anchor, url, title: getVideoTitle(anchor) });
       }
@@ -326,7 +338,12 @@
       card.querySelector(".cover") ||
       card.querySelector(".pic") ||
       card.querySelector("[class*='cover']") ||
-      card.querySelector("[class*='pic']")
+      card.querySelector("[class*='pic']") ||
+      card.querySelector("[class*='thumb']") ||
+      card.querySelector("picture") ||
+      card.querySelector("video") ||
+      card.querySelector("canvas") ||
+      card.querySelector("img")?.closest("a, div, picture")
     );
   };
 
