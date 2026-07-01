@@ -1,7 +1,7 @@
 (() => {
   "use strict";
 
-  const SCRIPT_VERSION = "0.2.2";
+  const SCRIPT_VERSION = "0.2.3";
 
   const cleanupInjectedUi = () => {
     if (window.__BFLP_GLOBAL_HANDLER) {
@@ -25,6 +25,7 @@
   if (window.__BFLP_VERSION === SCRIPT_VERSION) {
     return;
   }
+  cleanupInjectedUi();
   window.__BFLP_VERSION = SCRIPT_VERSION;
 
   const VIDEO_URL_RE = /(?:www\.)?bilibili\.com\/video\/(BV[0-9A-Za-z]+)/i;
@@ -57,6 +58,16 @@
     "[class*='episode']",
     "[class*='section']",
     "[class*='multi-page']"
+  ].join(",");
+  const PLAYBACK_SCAN_ROOT_SELECTOR = [
+    ".right-container",
+    ".recommend-list-v1",
+    ".recommend-list",
+    ".rec-list",
+    ".video-card-list",
+    ".video-page-card-small",
+    ".video-page-operator-card",
+    "#reco_list"
   ].join(",");
   const state = {
     items: [],
@@ -97,8 +108,23 @@
     return title ? title.trim() : "";
   };
 
+  const getPlaybackScanRoots = () => {
+    if (!isPlaybackPage) return [document];
+    const roots = [...document.querySelectorAll(PLAYBACK_SCAN_ROOT_SELECTOR)]
+      .filter((root) => root instanceof Element && !isIgnoredOnPlaybackPage(root));
+    return roots.length ? roots : [];
+  };
+
   const findCard = (anchor) => {
-    const selectors = [
+    const selectors = isPlaybackPage ? [
+      ".video-page-card-small",
+      ".video-page-operator-card",
+      ".bili-video-card",
+      ".bili-video-card__wrap",
+      ".video-card",
+      ".card-box",
+      "[class*='video-card']"
+    ] : [
       ".fav-video-card",
       ".small-item",
       ".bili-video-card",
@@ -127,6 +153,7 @@
       }
     }
 
+    if (isPlaybackPage) return null;
     return anchor;
   };
 
@@ -134,13 +161,15 @@
     const seen = new Set();
     const anchors = [];
 
-    for (const anchor of document.querySelectorAll("a[href]")) {
-      const url = normalizeVideoUrl(anchor.href);
-      if (!url || seen.has(url)) continue;
-      if (isPlaybackPage && url === currentVideoUrl) continue;
-      if (isIgnoredOnPlaybackPage(anchor)) continue;
-      seen.add(url);
-      anchors.push({ anchor, url, title: getVideoTitle(anchor) });
+    for (const root of getPlaybackScanRoots()) {
+      for (const anchor of root.querySelectorAll("a[href]")) {
+        const url = normalizeVideoUrl(anchor.href);
+        if (!url || seen.has(url)) continue;
+        if (isPlaybackPage && url === currentVideoUrl) continue;
+        if (isIgnoredOnPlaybackPage(anchor)) continue;
+        seen.add(url);
+        anchors.push({ anchor, url, title: getVideoTitle(anchor) });
+      }
     }
 
     return anchors;
@@ -399,10 +428,12 @@
       [...state.selected].map((index) => state.items[index]?.url).filter(Boolean)
     );
 
-    state.items = getOrderedAnchors().map((item) => ({
-      ...item,
-      card: findCard(item.anchor)
-    }));
+    state.items = getOrderedAnchors()
+      .map((item) => ({
+        ...item,
+        card: findCard(item.anchor)
+      }))
+      .filter((item) => item.card);
 
     state.selected.clear();
     state.items.forEach((item, index) => {
